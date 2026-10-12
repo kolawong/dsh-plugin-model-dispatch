@@ -35,6 +35,7 @@ export declare const zh: {
     codeCopied: string;
     footnotes: string;
     searchPlaceholder: string;
+    searchClear: string;
     searchResults: string;
     noResults: string;
     favorites: string;
@@ -91,6 +92,7 @@ export declare const en: {
     codeCopied: string;
     footnotes: string;
     searchPlaceholder: string;
+    searchClear: string;
     searchResults: string;
     noResults: string;
     favorites: string;

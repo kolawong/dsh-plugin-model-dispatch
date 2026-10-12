@@ -1,5 +1,6 @@
 /** The main-session chip uses native admission and live projection state. */
 import { useSyncExternalStore } from 'react'
+import { IconDataOutlineRegular } from '@deepseek-ai/dsh-client-ui-primitives'
 import type { ClientRemote } from '@deepseek-ai/dsh-api-remotes/client'
 import type { PropsRuntime } from '@deepseek-ai/dsh-client-ui-slots'
 import type {} from '@deepseek-ai/dsh-client-ui-conversation/client'
@@ -28,5 +29,5 @@ function SessionModelPickerLoaded({ sessionId, useSessions, access, remote, main
     const result = await remote.session.selectModel({ sessionId, ...selection })
     if (!result.ok) throw new Error(result.error.message)
   }
-  return <ModelPicker compact sessionId={sessionId} access={access} value={value} onChange={save} t={t} placement="top" roleLabel={t('chatMainRole')} disabled={locked || !available} scopeHint={t('mainScope')} sourceLabel={t(projection?.next || projection?.lastUsed ? 'sessionSource' : 'defaultSource')} seed={false} />
+  return <ModelPicker compact sessionId={sessionId} access={access} value={value} onChange={save} t={t} placement="top" roleLabel={t('chatMainRole')} roleIcon={<IconDataOutlineRegular size={16} />} disabled={locked || !available} scopeHint={t('mainScope')} sourceLabel={t(projection?.next || projection?.lastUsed ? 'sessionSource' : 'defaultSource')} seed={false} />
 }
