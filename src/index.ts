@@ -24,6 +24,7 @@ import { installSessionModelScope } from './session-model-scope.ts'
 import { modelRouteValidator } from './model-route.ts'
 import { installSubagentRouting } from './subagent-routing.ts'
 import { assertCatalogRoute, installSubagentCatalog } from './subagent-catalog.ts'
+import { installDelegationActivity } from './delegation-activity.ts'
 
 export {
   resolveCustomSelection,
@@ -58,6 +59,7 @@ export async function apply(ctx: Context, config: ModelSwitchConfig = {}): Promi
   const current = (): ModelSwitchConfig => config
   installSessionModelScope(ctx)
   installSubagentCatalog(ctx)
+  installDelegationActivity(ctx, current)
 
   const labels = new SessionLabelRegistry()
   installSessionLabelsHttp(ctx, labels)

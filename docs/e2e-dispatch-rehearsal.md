@@ -40,8 +40,8 @@ pnpm test  →  Test Files 12 passed (12) / Tests 65 passed (65)
 
 ## 预先存在、与本次无关的问题
 
-- `pnpm typecheck` 在本机失败：node_modules 同时解析到 npm registry 包与 `/root/deepseek-harness` 本地包，`AttachmentId` 等品牌类型双重身份不兼容。已用 `git stash` 验证该失败先于本次改动存在，且 tsconfig 只覆盖 `src/`，与新增测试文件无关。
-- `pnpm-lock.yaml` 为本次安装新生成的未跟踪文件（仓库原本只有 package-lock.json），是否纳入版本管理留待维护者决定。
+- ~~`pnpm typecheck` 在本机失败：node_modules 同时解析到 npm registry 包与 `/root/deepseek-harness` 本地包，`AttachmentId` 等品牌类型双重身份不兼容。~~ **已于 1.1.2 修复**：根因是 `@deepseek-ai/dsh-tools` 未声明依赖、向上解析到了 checkout 副本；补齐声明后 typecheck 恢复通过。
+- ~~`pnpm-lock.yaml` 是否纳入版本管理留待维护者决定。~~ **已决定（1.1.2）**：统一 pnpm——`pnpm-lock.yaml` 已跟踪，`package-lock.json` 已删除。
 
 ## 与实机验证文档的关系
 

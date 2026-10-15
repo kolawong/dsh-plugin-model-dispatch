@@ -71,7 +71,7 @@ dsh plugin --profile web add git@github.com:kolawong/dsh-plugin-model-dispatch.g
 
 Replace `web` with the profile you actually use (`desktop`, …). Then **fully quit and reopen DSH**: the host half needs a recomposition, and refreshing the page only reloads the client half.
 
-`lib/` in this repository holds the prebuilt host and client bundles, so installing needs no local build step.
+`lib/` is not tracked in git: git installs build the host and client bundles through the package's `prepare` script, and npm publishes build through `prepack`. For a local checkout, run `pnpm install && pnpm build` once before linking.
 
 <details>
 <summary>Manual install (link a local checkout)</summary>
@@ -84,7 +84,7 @@ Replace `web` with the profile you actually use (`desktop`, …). Then **fully q
 }
 ```
 
-Create the matching `node_modules` link (the profile directory is the resolution anchor), then restart DSH.
+In the checkout, run `pnpm install && pnpm build` first, then create the matching `node_modules` link (the profile directory is the resolution anchor), then restart DSH.
 </details>
 
 ## Usage
@@ -104,13 +104,14 @@ Opening either chip gives the same menu: search, provider groups, favorites (★
 
 ### Settings
 
-**Web settings → 模型切换 / Model switch** holds three rows, each with a one-line scope hint:
+**Web settings → Model & Agents** holds four rows, each with a one-line scope hint:
 
 | Row | Meaning |
 |---|---|
 | New-session default model | Written to the native `agent-default-model` entry. Changing the model inside a chat does **not** change it. |
 | Subagent default model | Used by subagents of any session that has no override. |
 | Planning model | Used while plan mode is active. |
+| Subagent delegation activity | A three-stop slider (conservative / balanced / aggressive) steering how eagerly the model splits work into subagents through the system prompt; balanced adds no extra guidance. Parallelism and nesting depth live under the host's own **Settings → Plugins → subagent** page. |
 
 ### Plan mode
 

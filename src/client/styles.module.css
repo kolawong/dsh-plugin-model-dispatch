@@ -22,3 +22,17 @@
 .actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
 .actions > :last-child { margin-left: auto; }
 .planPicker { display: flex; align-items: center; min-width: 0; }
+
+/* Delegation activity: discrete 3-stop slider, same language as the effort slider. */
+.activitySlider { position: relative; height: 26px; }
+.activityRail { position: absolute; left: 8px; right: 8px; top: 50%; height: 5px; transform: translateY(-50%); border-radius: 999px; background: var(--dsw-alias-interactive-bg-hover, #f3f3f7); }
+.activityFill { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 999px; background: var(--dsw-alias-state-business-primary, #5269dc); }
+.activityTick { position: absolute; top: calc(50% + 7px); width: 2px; height: 5px; margin-left: -1px; transform: translateY(-50%); border-radius: 1px; background: color-mix(in srgb, var(--dsw-alias-label-primary, #27272f) 16%, transparent); }
+.activityRange { position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; padding: 0; appearance: none; -webkit-appearance: none; background: transparent; cursor: pointer; }
+.activityRange:disabled { cursor: default; opacity: .5; }
+.activityRange::-webkit-slider-thumb { appearance: none; -webkit-appearance: none; width: 16px; height: 16px; border: 0; border-radius: 50%; background: #fff; box-shadow: 0 0.5px 1px #00000040, 0 1px 3px #00000026, 0 0 0 0.5px #0000001f; }
+.activityRange::-moz-range-thumb { width: 16px; height: 16px; border: 0; border-radius: 50%; background: #fff; box-shadow: 0 0.5px 1px #00000040, 0 1px 3px #00000026, 0 0 0 0.5px #0000001f; }
+.activityStops { display: flex; justify-content: space-between; margin-top: 2px; font-size: 11px; color: var(--dsw-alias-label-tertiary, #777784); }
+.activityValue { font-size: 12px; color: var(--dsw-alias-label-primary, #27272f); }
+.activityControl { display: flex; flex-direction: column; gap: 4px; }
+.activityHead { display: flex; justify-content: space-between; align-items: baseline; }

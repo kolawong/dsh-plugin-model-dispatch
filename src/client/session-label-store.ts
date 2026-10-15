@@ -6,6 +6,12 @@ import { SESSION_LABELS_ROUTE } from '../label.ts'
 
 export type SessionLabelMap = Readonly<Record<string, string>>
 
+/** Content equality for the small label map; skips no-op emits. */
+function sameLabels(a: SessionLabelMap, b: SessionLabelMap): boolean {
+  const aKeys = Object.keys(a)
+  return aKeys.length === Object.keys(b).length && aKeys.every(key => a[key] === b[key])
+}
+
 interface Snapshot {
   value: SessionLabelMap
   error: string | null
@@ -50,14 +56,15 @@ export class SessionLabelStore {
       if (body.ok !== true || body.value === undefined) {
         throw new Error('bad session-labels payload')
       }
+      // Unchanged maps are common between polls; keep the old snapshot so
+      // useSyncExternalStore subscribers are not re-rendered for nothing.
+      if (this.snap.error === null && sameLabels(this.snap.value, body.value)) return
       this.snap = { value: body.value, error: null, version: this.snap.version + 1 }
       this.emit()
     } catch (cause: unknown) {
-      this.snap = {
-        value: this.snap.value,
-        error: cause instanceof Error ? cause.message : String(cause),
-        version: this.snap.version + 1,
-      }
+      const error = cause instanceof Error ? cause.message : String(cause)
+      if (this.snap.error === error) return
+      this.snap = { value: this.snap.value, error, version: this.snap.version + 1 }
       this.emit()
     }
   }

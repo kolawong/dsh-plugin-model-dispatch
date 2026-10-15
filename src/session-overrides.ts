@@ -7,13 +7,13 @@
  * thread's pick survives host restarts.
  */
 
-import { mkdir, readFile, rename, writeFile } from 'node:fs/promises'
+import { mkdir, readFile, rename, rm, writeFile } from 'node:fs/promises'
 import { randomUUID } from 'node:crypto'
 import { dirname, join } from 'node:path'
-import type { IncomingMessage, ServerResponse } from 'node:http'
 import type { Context } from '@deepseek-ai/cordis'
 import { resolveDshHome } from '@deepseek-ai/dsh-home-paths'
 import { SESSION_OVERRIDES_ROUTE } from './label.ts'
+import { json, mountRoute, readBody } from './http.ts'
 import type { ModelSelectionConfig } from './shared.ts'
 import type { RouteValidator } from './model-route.ts'
 
@@ -40,7 +40,12 @@ export class SessionOverrideStore {
 
   /** Both host activation and HTTP reads wait for this shared initialization. */
   ready(): Promise<void> {
-    return this.loading ??= this.load()
+    // A failed load is not cached: the next ready() retries instead of
+    // failing every later request forever.
+    return this.loading ??= this.load().catch((cause: unknown) => {
+      this.loading = undefined
+      throw cause
+    })
   }
 
   async set(sessionId: string, selection: ModelSelectionConfig | undefined): Promise<void> {
@@ -79,8 +84,13 @@ export class SessionOverrideStore {
   private async writeOnce(value: Record<string, ModelSelectionConfig>): Promise<void> {
     await mkdir(dirname(this.path), { recursive: true })
     const tmp = `${this.path}.${randomUUID()}.tmp`
-    await writeFile(tmp, JSON.stringify(value, null, 2))
-    await rename(tmp, this.path)
+    try {
+      await writeFile(tmp, JSON.stringify(value, null, 2))
+      await rename(tmp, this.path)
+    } catch (cause) {
+      await rm(tmp, { force: true }).catch(() => {})
+      throw cause
+    }
   }
 
 }
@@ -93,107 +103,62 @@ function isSelection(value: unknown): value is ModelSelectionConfig {
     && (row.reasoningEffort === undefined || typeof row.reasoningEffort === 'string')
 }
 
-/** Minimal face of the host web-server route registry. */
-interface WebRouteHost {
-  register(route: {
-    kind: 'exact' | 'prefix'
-    path: string
-    handler: (req: IncomingMessage, res: ServerResponse) => void | Promise<void>
-  }): () => void
-}
-
-function json(res: ServerResponse, status: number, body: unknown): void {
-  const bytes = Buffer.from(JSON.stringify(body))
-  res.writeHead(status, {
-    'content-type': 'application/json; charset=utf-8',
-    'cache-control': 'no-store',
-    'content-length': String(bytes.length),
-  })
-  res.end(bytes)
-}
-
-function readBody(req: IncomingMessage): Promise<string> {
-  return new Promise((resolveBody, rejectBody) => {
-    let data = ''
-    req.on('data', (chunk: Buffer) => { data += chunk })
-    req.on('end', () => { resolveBody(data) })
-    req.on('error', rejectBody)
-  })
-}
-
 /**
  * Mount GET/POST session-overrides when a web server is available.
  * @param ctx - host context.
  * @param store - override map.
  */
 export function installSessionOverridesHttp(ctx: Context, store: SessionOverrideStore, validate?: RouteValidator): void {
-  let registered = false
-  const mount = (web: WebRouteHost): void => {
-    if (registered) return
-    registered = true
-    ctx.effect(() => web.register({
-      kind: 'exact',
-      path: SESSION_OVERRIDES_ROUTE,
-      handler: async (req: IncomingMessage, res: ServerResponse) => {
-        if (req.method === 'GET') {
-          try {
-            await store.ready()
-          } catch {
-            json(res, 500, { ok: false, error: { message: 'Cannot load session overrides' } })
+  mountRoute(ctx, SESSION_OVERRIDES_ROUTE, 'model-switch: session-overrides route', async (req, res) => {
+    if (req.method === 'GET') {
+      try {
+        await store.ready()
+      } catch {
+        json(res, 500, { ok: false, error: { message: 'Cannot load session overrides' } })
+        return
+      }
+      json(res, 200, { ok: true, value: store.snapshot() })
+      return
+    }
+    if (req.method === 'POST') {
+      try {
+        const body = JSON.parse(await readBody(req)) as {
+          sessionId?: unknown
+          selection?: ModelSelectionConfig | null
+        }
+        if (body === null || typeof body !== 'object' || typeof body.sessionId !== 'string' || body.sessionId.length === 0) {
+          json(res, 400, { ok: false, error: { message: 'sessionId required' } })
+          return
+        }
+        const selection = body.selection === null || body.selection === undefined
+          ? undefined
+          : body.selection
+        if (selection !== undefined && !isSelection(selection)) {
+          json(res, 400, { ok: false, error: { message: 'invalid selection' } })
+          return
+        }
+        if (selection !== undefined && validate !== undefined) {
+          try { await validate(selection) } catch (cause) {
+            json(res, 400, { ok: false, error: { code: 'invalid-model-route', message: cause instanceof Error ? cause.message : String(cause) } })
             return
           }
-          json(res, 200, { ok: true, value: store.snapshot() })
+        }
+        try {
+          await store.set(body.sessionId, selection)
+        } catch {
+          json(res, 500, { ok: false, error: { message: 'Cannot save session overrides' } })
           return
         }
-        if (req.method === 'POST') {
-          try {
-            const body = JSON.parse(await readBody(req)) as {
-              sessionId?: unknown
-              selection?: ModelSelectionConfig | null
-            }
-            if (body === null || typeof body !== 'object' || typeof body.sessionId !== 'string' || body.sessionId.length === 0) {
-              json(res, 400, { ok: false, error: { message: 'sessionId required' } })
-              return
-            }
-            const selection = body.selection === null || body.selection === undefined
-              ? undefined
-              : body.selection
-            if (selection !== undefined && !isSelection(selection)) {
-              json(res, 400, { ok: false, error: { message: 'invalid selection' } })
-              return
-            }
-            if (selection !== undefined && validate !== undefined) {
-              try { await validate(selection) } catch (cause) {
-                json(res, 400, { ok: false, error: { code: 'invalid-model-route', message: cause instanceof Error ? cause.message : String(cause) } })
-                return
-              }
-            }
-            try {
-              await store.set(body.sessionId, selection)
-            } catch {
-              json(res, 500, { ok: false, error: { message: 'Cannot save session overrides' } })
-              return
-            }
-            json(res, 200, { ok: true, value: store.snapshot() })
-          } catch (cause) {
-            json(res, 400, {
-              ok: false,
-              error: { message: cause instanceof Error ? cause.message : String(cause) },
-            })
-          }
-          return
-        }
-        res.writeHead(405, { allow: 'GET, POST' })
-        res.end()
-      },
-    }), 'model-switch: session-overrides route')
-  }
-  const web = ctx.get('webServer') as WebRouteHost | undefined
-  if (web !== undefined) {
-    mount(web)
-    return
-  }
-  ctx.inject(['webServer'], (webCtx) => {
-    mount(webCtx.webServer)
+        json(res, 200, { ok: true, value: store.snapshot() })
+      } catch (cause) {
+        json(res, 400, {
+          ok: false,
+          error: { message: cause instanceof Error ? cause.message : String(cause) },
+        })
+      }
+      return
+    }
+    res.writeHead(405, { allow: 'GET, POST' })
+    res.end()
   })
 }

@@ -71,7 +71,7 @@ dsh plugin --profile web add git@github.com:kolawong/dsh-plugin-model-dispatch.g
 
 把 `web` 换成你实际使用的 profile（`desktop` 等）。安装后**完全退出并重新打开 DSH**：宿主半边需要重组合，只刷新页面只会加载新的客户端半边。
 
-仓库里的 `lib/` 是已构建产物（宿主 + 客户端），安装无需本地构建。
+仓库不跟踪 `lib/` 构建产物：git 安装会经包的 `prepare` 脚本自动构建宿主与客户端 bundle，npm 发布走 `prepack` 构建。本地 checkout 手动安装前需先执行一次 `pnpm install && pnpm build`。
 
 <details>
 <summary>手动安装（链接本地目录）</summary>
@@ -84,7 +84,7 @@ dsh plugin --profile web add git@github.com:kolawong/dsh-plugin-model-dispatch.g
 }
 ```
 
-在 profile 目录下建立对应的 `node_modules` 链接（profile 目录是解析锚点），然后重启 DSH。
+先在 checkout 里执行 `pnpm install && pnpm build`，再在 profile 目录下建立对应的 `node_modules` 链接（profile 目录是解析锚点），然后重启 DSH。
 </details>
 
 ## 使用
@@ -104,13 +104,14 @@ dsh plugin --profile web add git@github.com:kolawong/dsh-plugin-model-dispatch.g
 
 ### 设置页
 
-**Web 设置 → 模型切换** 里有三行，每行一句作用范围说明：
+**Web 设置 → 模型代理** 里有四行，每行一句作用范围说明：
 
 | 行 | 含义 |
 |---|---|
 | 新会话默认模型 | 写入原生 `agent-default-model` 项；在聊天里切换模型**不会**改动它。 |
 | 子代理默认模型 | 供没有会话覆盖的会话中的子代理使用。 |
 | 制定计划模型 | 计划模式激活期间使用。 |
+| 子代理派发活跃度 | 三档滑杆（保守 / 均衡 / 积极），经系统提示词引导模型拆任务的倾向；均衡 = 不加额外引导。并行上限与嵌套深度由宿主自带的「设置 → 插件 → subagent」页管理。 |
 
 ### 计划模式
 

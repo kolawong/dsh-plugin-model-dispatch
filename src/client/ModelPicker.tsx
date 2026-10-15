@@ -25,8 +25,6 @@ export interface ModelPickerProps {
   placement?: 'top' | 'bottom'
   fallbackLabel?: string
   requireSession?: boolean
-  /** Retained for callers: opening a picker never persists an implicit seed. */
-  seed?: boolean
   /** Accessible control/menu label without another visible trigger prefix. */
   controlLabel?: string
   /** Full-width setting control; chat chips keep their compact layout. */
@@ -187,12 +185,17 @@ export function ModelPicker({ sessionId, access, value, onChange, t, disabled, c
     items[next]?.focus()
   }
   const normalized = query.trim().toLocaleLowerCase()
-  const visible = choices.filter(row => `${row.name} ${row.model} ${row.providerName} ${row.provider}`.toLocaleLowerCase().includes(normalized))
-  const groups = normalized ? [{ label: t('searchResults'), rows: visible }] : [
-    { label: t('favorites'), rows: choices.filter(row => preferences.favorites.includes(modelKey(row))) },
-    { label: t('recentModels'), rows: preferences.recent.flatMap(key => choices.filter(row => modelKey(row) === key)) },
-    ...(catalog?.groups.map(group => ({ label: group.name, rows: choices.filter(row => row.provider === group.id) })) ?? []),
-  ]
+  const { visible, groups } = useMemo(() => {
+    const matches = choices.filter(row => `${row.name} ${row.model} ${row.providerName} ${row.provider}`.toLocaleLowerCase().includes(normalized))
+    return {
+      visible: matches,
+      groups: normalized ? [{ label: t('searchResults'), rows: matches }] : [
+        { label: t('favorites'), rows: choices.filter(row => preferences.favorites.includes(modelKey(row))) },
+        { label: t('recentModels'), rows: preferences.recent.flatMap(key => choices.filter(row => modelKey(row) === key)) },
+        ...(catalog?.groups.map(group => ({ label: group.name, rows: choices.filter(row => row.provider === group.id) })) ?? []),
+      ],
+    }
+  }, [choices, normalized, preferences, catalog, t])
   if (requireSession && sessionId === undefined) return <p className={css.muted}>{t('noSession')}</p>
   return (
     <div className={[css.root, compact ? css.compact : undefined, stretch ? css.stretch : undefined, className].filter(Boolean).join(' ')}>

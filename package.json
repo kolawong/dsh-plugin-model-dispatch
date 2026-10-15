@@ -1,6 +1,6 @@
 {
   "name": "dsh-plugin-model-dispatch",
-  "version": "1.1.1",
+  "version": "1.2.0",
   "description": "DSH plugin: per-session model switching for main agent, subagents, and plan mode / 为 DSH 的主会话、子代理与计划模式分别选择模型与思考强度",
   "type": "module",
   "main": "lib/index.js",
@@ -78,11 +78,13 @@
     "build": "tsc -p tsconfig.json && tsc -p tsconfig.client.json && tsdown",
     "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.client.json --noEmit",
     "test": "vitest run",
+    "prepare": "npm run build",
     "prepack": "npm run build"
   },
   "peerDependencies": {
     "@deepseek-ai/cordis": "^4.0.2",
     "@deepseek-ai/dsh-agent": "^0.2.0-rc.2",
+    "@deepseek-ai/dsh-agent-default-model": "^0.2.0-rc.2",
     "@deepseek-ai/dsh-api-remotes": "^0.2.0-rc.2",
     "@deepseek-ai/dsh-api-session-controller": "^0.2.0-rc.2",
     "@deepseek-ai/dsh-client-connection": "^0.2.0-rc.2",
@@ -94,8 +96,11 @@
     "@deepseek-ai/dsh-client-ui-settings": "^0.2.0-rc.2",
     "@deepseek-ai/dsh-client-ui-slots": "^0.2.0-rc.2",
     "@deepseek-ai/dsh-client-ui-user-questions": "^0.2.0-rc.2",
+    "@deepseek-ai/dsh-home-paths": "^0.2.0-rc.2",
+    "@deepseek-ai/dsh-session-projection": "^0.2.0-rc.2",
     "@deepseek-ai/dsh-settings": "^0.2.0-rc.2",
     "@deepseek-ai/dsh-subagent": "^0.2.0-rc.2",
+    "@deepseek-ai/dsh-tools": "^0.2.0-rc.2",
     "@deepseek-ai/dsh-user-questions": "^0.2.0-rc.2",
     "@deepseek-ai/schemastery": "^3.18.2",
     "react": "^18.2.0",
@@ -107,6 +112,9 @@
       "optional": true
     },
     "@deepseek-ai/dsh-agent": {
+      "optional": true
+    },
+    "@deepseek-ai/dsh-agent-default-model": {
       "optional": true
     },
     "@deepseek-ai/dsh-api-remotes": {
@@ -139,10 +147,19 @@
     "@deepseek-ai/dsh-client-ui-user-questions": {
       "optional": true
     },
+    "@deepseek-ai/dsh-home-paths": {
+      "optional": true
+    },
+    "@deepseek-ai/dsh-session-projection": {
+      "optional": true
+    },
     "@deepseek-ai/dsh-settings": {
       "optional": true
     },
     "@deepseek-ai/dsh-subagent": {
+      "optional": true
+    },
+    "@deepseek-ai/dsh-tools": {
       "optional": true
     },
     "@deepseek-ai/dsh-user-questions": {
@@ -156,11 +173,15 @@
     },
     "react-dom": {
       "optional": true
+    },
+    "zod": {
+      "optional": true
     }
   },
   "devDependencies": {
     "@deepseek-ai/cordis": "^4.0.2",
     "@deepseek-ai/dsh-agent": "0.2.0-rc.2",
+    "@deepseek-ai/dsh-agent-default-model": "0.2.0-rc.2",
     "@deepseek-ai/dsh-api-gateway": "0.2.0-rc.2",
     "@deepseek-ai/dsh-api-remotes": "0.2.0-rc.2",
     "@deepseek-ai/dsh-api-session-controller": "0.2.0-rc.2",
@@ -176,8 +197,11 @@
     "@deepseek-ai/dsh-client-ui-user-questions": "0.2.0-rc.2",
     "@deepseek-ai/dsh-client-ui-workspace": "^0.2.0-rc.2",
     "@deepseek-ai/dsh-host-webserver": "0.2.0-rc.2",
+    "@deepseek-ai/dsh-home-paths": "0.2.0-rc.2",
+    "@deepseek-ai/dsh-session-projection": "0.2.0-rc.2",
     "@deepseek-ai/dsh-settings": "0.2.0-rc.2",
     "@deepseek-ai/dsh-subagent": "0.2.0-rc.2",
+    "@deepseek-ai/dsh-tools": "0.2.0-rc.2",
     "@deepseek-ai/dsh-user-questions": "0.2.0-rc.2",
     "@deepseek-ai/schemastery": "^3.18.2",
     "@types/node": "^24.13.3",

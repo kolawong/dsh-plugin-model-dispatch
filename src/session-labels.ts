@@ -2,33 +2,14 @@
  * Host registry of subagent session → display label + HTTP readout.
  */
 
-import type { IncomingMessage, ServerResponse } from 'node:http'
 import type { Context } from '@deepseek-ai/cordis'
 import type { Agent } from '@deepseek-ai/dsh-agent'
-import type {} from '@deepseek-ai/dsh-agent'
 import type {} from '@deepseek-ai/dsh-host-webserver'
 import { formatModelLabel, SESSION_LABELS_ROUTE, type ModelLabelParts } from './label.ts'
+import { json, mountRoute } from './http.ts'
 import type { ModelSelectionConfig } from './shared.ts'
 
 export { SESSION_LABELS_ROUTE }
-
-interface WebRouteHost {
-  register(route: {
-    kind: 'exact' | 'prefix'
-    path: string
-    handler: (req: IncomingMessage, res: ServerResponse) => void | Promise<void>
-  }): () => void
-}
-
-function json(res: ServerResponse, status: number, body: unknown): void {
-  const bytes = Buffer.from(JSON.stringify(body))
-  res.writeHead(status, {
-    'content-type': 'application/json; charset=utf-8',
-    'cache-control': 'no-store',
-    'content-length': String(bytes.length),
-  })
-  res.end(bytes)
-}
 
 /** In-memory labels keyed by child session id. */
 export class SessionLabelRegistry {
@@ -112,29 +93,34 @@ export function installSessionLabelTracking(
   registry: SessionLabelRegistry,
   currentEffort: () => string | undefined,
 ): void {
+  // Labels only change when the route does: remember the last computed
+  // provider/model/effort per session and skip the catalog lookup otherwise.
+  const signatures = new Map<string, string>()
+  const track = (sessionId: string, agent: Agent, effort: string | undefined): void => {
+    const signature = `${agent.options.provider ?? ''}/${agent.options.model ?? ''}/${effort ?? ''}`
+    if (signatures.get(sessionId) === signature) return
+    signatures.set(sessionId, signature)
+    void resolveAgentLabel(ctx, agent, effort).then((label) => {
+      if (label !== undefined) registry.set(sessionId, label)
+    })
+  }
   ctx.on('agent/created', ({ agent }): undefined => {
     if (agent.session.header.origin !== 'subagent') return
     const sessionId = String(agent.session.header.id)
-    void resolveAgentLabel(ctx, agent, currentEffort()).then((label) => {
-      if (label !== undefined) registry.set(sessionId, label)
-    })
+    track(sessionId, agent, currentEffort())
 
     agent.ctx.on('agent/request', async (_payload, next) => {
       const seed = await next()
-      void (async () => {
-        const effortRaw = seed.reasoningEffort ?? currentEffort()
-        const effort = effortRaw === undefined ? undefined : String(effortRaw)
-        const patched = {
-          ...agent,
-          options: {
-            ...agent.options,
-            provider: seed.provider ?? agent.options.provider,
-            model: seed.model ?? agent.options.model,
-          },
-        } as Agent
-        const label = await resolveAgentLabel(ctx, patched, effort)
-        if (label !== undefined) registry.set(sessionId, label)
-      })()
+      const effortRaw = seed.reasoningEffort ?? currentEffort()
+      const effort = effortRaw === undefined ? undefined : String(effortRaw)
+      track(sessionId, {
+        ...agent,
+        options: {
+          ...agent.options,
+          provider: seed.provider ?? agent.options.provider,
+          model: seed.model ?? agent.options.model,
+        },
+      } as Agent, effort)
       return seed
     })
   })
@@ -146,32 +132,13 @@ export function installSessionLabelTracking(
  * @param registry - label map.
  */
 export function installSessionLabelsHttp(ctx: Context, registry: SessionLabelRegistry): void {
-  let registered = false
-  const mount = (web: WebRouteHost): void => {
-    if (registered) return
-    registered = true
-    ctx.effect(() => web.register({
-      kind: 'exact',
-      path: SESSION_LABELS_ROUTE,
-      handler: (req, res) => {
-        if (req.method !== 'GET') {
-          res.writeHead(405, { allow: 'GET' })
-          res.end()
-          return
-        }
-        json(res, 200, { ok: true, value: registry.snapshot() })
-      },
-    }), 'model-switch: session-labels route')
-  }
-
-  const tryMount = (): void => {
-    const web = ctx.get('webServer') as WebRouteHost | undefined
-    if (web !== undefined) mount(web)
-  }
-
-  tryMount()
-  ctx.inject(['webServer'], (webCtx) => {
-    mount(webCtx.webServer as unknown as WebRouteHost)
+  mountRoute(ctx, SESSION_LABELS_ROUTE, 'model-switch: session-labels route', (req, res) => {
+    if (req.method !== 'GET') {
+      res.writeHead(405, { allow: 'GET' })
+      res.end()
+      return
+    }
+    json(res, 200, { ok: true, value: registry.snapshot() })
   })
 }
 

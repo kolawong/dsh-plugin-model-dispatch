@@ -5,7 +5,9 @@ import { PLAN_MAIN_MODELS_ROUTE } from '../src/plan-routes.ts'
 describe('review model readout', () => {
   it('serves the stored original model and refuses writes', () => {
     let route: any
-    installPlanMainsHttp({ get: () => ({ register: (value: any) => { route = value; return () => {} } }), effect: (fn: () => unknown) => fn() } as never, { snapshot: () => ({ s1: { provider: 'droid', model: 'sonnet', reasoningEffort: 'high' } }) } as never)
+    // mountRoute 走 ctx.inject(['webServer'])：回调立即拿到带 webServer 与 effect 的 scope。
+    const scope = { webServer: { register: (value: any) => { route = value; return () => {} } }, effect: (fn: () => unknown) => fn() }
+    installPlanMainsHttp({ inject: (_deps: unknown, cb: (scope: any) => void) => cb(scope) } as never, { snapshot: () => ({ s1: { provider: 'droid', model: 'sonnet', reasoningEffort: 'high' } }) } as never)
     expect(route.path).toBe(PLAN_MAIN_MODELS_ROUTE)
     const response = () => ({ status: 0, body: '', writeHead(value: number) { this.status = value }, end(value = '') { this.body = value } })
     const read = response(); route.handler({ method: 'GET' }, read)

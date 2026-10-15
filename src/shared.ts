@@ -15,12 +15,17 @@ export interface RouteSwitchConfig {
   selection?: ModelSelectionConfig
 }
 
+/** How eagerly the agent delegates to subagents (prompt-level guidance). */
+export type DelegationActivity = 'conservative' | 'balanced' | 'aggressive'
+
 /** Full plugin settings section. */
 export interface Config {
   /** Model route for in-process subagents. */
   subagent?: RouteSwitchConfig
   /** Model route applied while plan mode is active (drafting the plan). */
   planPlanning?: RouteSwitchConfig
+  /** Delegation eagerness guidance injected after the native subagent section. */
+  subagentActivity?: DelegationActivity
 }
 
 /** Settings namespace string (must match host registration). */

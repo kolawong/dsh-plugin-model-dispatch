@@ -8,7 +8,7 @@
 
 import type { ConfigForm, ConfigFormSnapshot } from '@deepseek-ai/dsh-client-ui-settings/client'
 import type { SettingsPathOpView } from '@deepseek-ai/dsh-api-remotes/client'
-import type { Config, ModelSelectionConfig, RouteSwitchConfig } from '../shared.ts'
+import type { Config, DelegationActivity, ModelSelectionConfig, RouteSwitchConfig } from '../shared.ts'
 
 export interface ConfigStoreSnapshot {
   status: 'loading' | 'ready' | 'error'
@@ -67,6 +67,14 @@ export class ConfigStore {
    */
   async saveRoute(field: 'subagent' | 'planPlanning', next: RouteSwitchConfig): Promise<void> {
     const accepted = await this.form.set(field, toJsonValue(next))
+    if (!accepted) {
+      throw new Error('settings write rejected')
+    }
+  }
+
+  /** Persist the delegation-activity field (plain string value). */
+  async saveActivity(next: DelegationActivity): Promise<void> {
+    const accepted = await this.form.set('subagentActivity', next)
     if (!accepted) {
       throw new Error('settings write rejected')
     }

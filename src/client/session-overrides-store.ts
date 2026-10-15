@@ -7,9 +7,15 @@
  */
 
 import { SESSION_OVERRIDES_ROUTE } from '../label.ts'
-import type { ModelSelectionConfig } from '../shared.ts'
+import { sameSelection, type ModelSelectionConfig } from '../shared.ts'
 
 export type SessionOverrideMap = Readonly<Record<string, ModelSelectionConfig>>
+
+/** Content equality for the small override map; skips no-op emits. */
+function sameOverrides(a: SessionOverrideMap, b: SessionOverrideMap): boolean {
+  const aKeys = Object.keys(a)
+  return aKeys.length === Object.keys(b).length && aKeys.every(key => sameSelection(a[key], b[key]))
+}
 
 interface Snapshot {
   value: SessionOverrideMap
@@ -105,6 +111,8 @@ export class SessionOverrideStore {
         throw new Error('bad session-overrides payload')
       }
       if (revision !== this.writeRevision) return
+      // Skip no-op emits: polling usually returns the map we already have.
+      if (this.snap.error === null && !this.snap.unavailable && sameOverrides(this.snap.value, body.value)) return
       this.snap = { value: body.value, error: null, unavailable: false, version: this.snap.version + 1 }
       this.emit()
     } catch (cause: unknown) {
@@ -114,10 +122,13 @@ export class SessionOverrideStore {
       // the picker hides itself until the host catches up.
       const message = cause instanceof Error ? cause.message : String(cause)
       const missing = message === 'HTTP 404' || message === 'HTTP 405'
+      const unavailable = missing || this.snap.unavailable
+      const error = missing ? null : message
+      if (this.snap.error === error && this.snap.unavailable === unavailable) return
       this.snap = {
         value: this.snap.value,
-        error: missing ? null : message,
-        unavailable: missing || this.snap.unavailable,
+        error,
+        unavailable,
         version: this.snap.version + 1,
       }
       this.emit()

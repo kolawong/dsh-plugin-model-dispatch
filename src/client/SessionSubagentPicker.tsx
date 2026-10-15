@@ -42,7 +42,7 @@ function SessionSubagentPickerLoaded({ sessionId, overrides, store, access, t, u
   const inherited = defaultRoute ?? mainSelection?.next ?? mainSelection?.lastUsed ?? access.currentSelection(sessionId)
   const write = (selection: ModelSelectionConfig): Promise<void> => overrides.set(sessionId, selection)
   return <div className={css.wrap}>
-    <ModelPicker compact disabled={locked} sessionId={sessionId} access={access} value={override ?? inherited} onChange={write} placement="top" roleLabel={t('chatSubagentRole')} roleIcon={<IconBranchOutlineRegular size={16} />} compactLabel={override === undefined && defaultRoute === undefined ? t('followingMain') : undefined} sourceLabel={t(override ? 'sessionSource' : defaultRoute ? 'defaultSource' : 'followingMain')} scopeHint={t('subagentScope')} t={t} seed={false} onClear={override ? () => overrides.set(sessionId, undefined) : undefined} clearLabel={t('sessionPickerClear')} />
+    <ModelPicker compact disabled={locked} sessionId={sessionId} access={access} value={override ?? inherited} onChange={write} placement="top" roleLabel={t('chatSubagentRole')} roleIcon={<IconBranchOutlineRegular size={16} />} compactLabel={override === undefined && defaultRoute === undefined ? t('followingMain') : undefined} sourceLabel={t(override ? 'sessionSource' : defaultRoute ? 'defaultSource' : 'followingMain')} scopeHint={t('subagentScope')} t={t} onClear={override ? () => overrides.set(sessionId, undefined) : undefined} clearLabel={t('sessionPickerClear')} />
     {snap.error && <span className={css.error} role="status">{t('loadError')}: {snap.error}</span>}
   </div>
 }

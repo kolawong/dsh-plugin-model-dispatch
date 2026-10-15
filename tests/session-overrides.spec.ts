@@ -14,7 +14,9 @@ async function setup() {
 }
 async function route(store: SessionOverrideStore, method: string, body?: unknown, validate?: RouteValidator) {
   let handler!: (req: unknown, res: unknown) => Promise<void>
-  installSessionOverridesHttp({ get: () => ({ register: (row: { handler: typeof handler }) => { handler = row.handler; return () => {} } }), effect: (fn: () => unknown) => fn() } as never, store, validate)
+  // mountRoute 走 ctx.inject(['webServer'])：回调立即拿到带 webServer 与 effect 的 scope。
+  const scope = { webServer: { register: (row: { handler: typeof handler }) => { handler = row.handler; return () => {} } }, effect: (fn: () => unknown) => fn() }
+  installSessionOverridesHttp({ inject: (_deps: unknown, cb: (scope: unknown) => void) => cb(scope) } as never, store, validate)
   const req = Object.assign(new EventEmitter(), { method })
   const response = { status: 0, body: '', writeHead(status: number) { this.status = status }, end(bytes?: Buffer) { this.body = bytes?.toString() ?? '' } }
   const pending = handler(req, response)

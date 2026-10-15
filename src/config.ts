@@ -36,6 +36,7 @@ const RouteSchema: z<RouteSwitchConfig> = z.object({
 export const ConfigSchema = z.object({
   subagent: RouteSchema.default({ mode: 'follow-main' }).volatile(),
   planPlanning: RouteSchema.default({ mode: 'follow-main' }).volatile(),
+  subagentActivity: z.union(['conservative', 'balanced', 'aggressive'] as const).default('balanced').volatile(),
 })
 
 /**
